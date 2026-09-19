@@ -1,23 +1,53 @@
-const APP_VERSION='0.12.2'; const APP_DATE='19.09.2026';
+const APP_VERSION='0.14.0'; const APP_DATE='19.09.2026';
+const SUPABASE_URL='https://pgjhswuduxrbktjzdnty.supabase.co';
+const SUPABASE_KEY='sb_publishable_MKZLIuSWTfWSs_o5ABLT0Q_hqaWlMb5';
+const STATE_ID='00000000-0000-0000-0000-000000000001';
 const KEY='wildverteilung_v4';
-const old=JSON.parse(localStorage.getItem('wildverteilung_v1')||'null');
-const seed={users:[{id:1,name:'Benjamin Böttcher',login:'benjamin',pin:'1234',status:'tenant',fixedHunter:true,isHunter:true,isDistributor:true,isAdmin:true,mainAdmin:true,phone:'',active:true},{id:2,name:'Uwe',login:'',pin:'',status:'fixed',fixedHunter:true,isHunter:true,isDistributor:false,isAdmin:false,phone:'',active:true},{id:3,name:'Jürgen',login:'',pin:'',status:'fixed',fixedHunter:true,isHunter:true,isDistributor:false,isAdmin:false,phone:'',active:true}],kills:[],hunts:[],session:null};
-let db=JSON.parse(localStorage.getItem(KEY)||'null')||JSON.parse(localStorage.getItem('wildverteilung_v3')||'null')||JSON.parse(localStorage.getItem('wildverteilung_v2')||'null')||old||seed; db.hunts=db.hunts||[]; db.groups=db.groups||[]; db.users.forEach(u=>u.groups=Array.isArray(u.groups)?u.groups:[]);
-// V0.11.1: Hauptadministrator-Zugang selbstheilend sicherstellen, ohne Jagd-/Verteilungsdaten zu löschen.
-let mainAdmin=db.users.find(u=>(u.name||'').trim().toLowerCase()==='benjamin böttcher') || db.users.find(u=>u.mainAdmin);
-if(!mainAdmin){mainAdmin={id:Date.now(),name:'Benjamin Böttcher',phone:'',active:true};db.users.unshift(mainAdmin)}
-mainAdmin.name='Benjamin Böttcher'; mainAdmin.active=true; mainAdmin.status='tenant'; mainAdmin.fixedHunter=true; mainAdmin.isHunter=true; mainAdmin.isDistributor=true; mainAdmin.isAdmin=true; mainAdmin.mainAdmin=true;
-// Reparaturzugang für diese Version. Nach Anmeldung kann Benjamin die PIN in der Personenverwaltung ändern.
-mainAdmin.login='benjamin'; mainAdmin.pin='1234';
-db.users.forEach(u=>{u.active=u.active!==false; if(u.fixedHunter===undefined)u.fixedHunter=!!u.isHunter; if(!u.status)u.status=u.fixedHunter?'fixed':'guest'; if((u.name||'').toLowerCase()==='benjamin böttcher'){u.mainAdmin=true;u.status='tenant'} u.isHunter=true; u.fixedHunter=u.status==='fixed'||u.status==='tenant'; u.isDistributor=u.status==='tenant'; u.isAdmin=u.status==='tenant'; if(u.status!=='tenant'){u.login='';u.pin=''} }); db.kills.forEach(k=>k.parts.forEach(p=>{p.rejectedBy=p.rejectedBy||[]})); db.hunts.forEach(h=>(h.allocations||[]).forEach(a=>{a.rejectedBy=a.rejectedBy||[]}));
-const save=()=>{localStorage.setItem(KEY,JSON.stringify(db));};
-save();
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const seed={users:[],kills:[],hunts:[],groups:[],session:null};
+let db=structuredClone(seed);
+let authUser=null;
+let syncTimer=null;
+function localCandidate(){
+  for(const k of [KEY,'wildverteilung_v3','wildverteilung_v2','wildverteilung_v1']){
+    try{const x=JSON.parse(localStorage.getItem(k)||'null'); if(x&&Array.isArray(x.users)) return x}catch(e){}
+  }
+  return null;
+}
+function normalizeDb(x){
+  x=x||structuredClone(seed); x.users=x.users||[]; x.kills=x.kills||[]; x.hunts=x.hunts||[]; x.groups=x.groups||[];
+  x.users.forEach(u=>{u.groups=Array.isArray(u.groups)?u.groups:[];u.active=u.active!==false;if(!u.status)u.status=u.fixedHunter?'fixed':'guest';u.isHunter=true;u.fixedHunter=u.status==='fixed'||u.status==='tenant';u.isDistributor=u.status==='tenant';u.isAdmin=u.status==='tenant';if((u.name||'').trim().toLowerCase()==='benjamin böttcher'){u.mainAdmin=true;u.status='tenant'}});
+  x.kills.forEach(k=>(k.parts||[]).forEach(p=>p.rejectedBy=p.rejectedBy||[])); x.hunts.forEach(h=>(h.allocations||[]).forEach(a=>a.rejectedBy=a.rejectedBy||[]));
+  return x;
+}
+async function loadCloudState(){
+  const {data,error}=await sb.from('app_state').select('daten').eq('id',STATE_ID).maybeSingle();
+  if(error) throw error;
+  if(data?.daten){db=normalizeDb(data.daten);return}
+  const old=localCandidate();
+  db=normalizeDb(old||seed);
+  if(!db.users.some(u=>u.mainAdmin)) db.users.unshift({id:Date.now(),name:'Benjamin Böttcher',status:'tenant',active:true,mainAdmin:true,fixedHunter:true,isHunter:true,isDistributor:true,isAdmin:true,groups:[]});
+  await saveNow();
+}
+async function saveNow(){
+  if(!authUser)return;
+  const clean=JSON.parse(JSON.stringify({...db,session:null}));
+  const {error}=await sb.from('app_state').upsert({id:STATE_ID,daten:clean,geaendert_am:new Date().toISOString()});
+  if(error){console.error(error);alert('Synchronisierung fehlgeschlagen: '+error.message)}
+}
+function save(){clearTimeout(syncTimer);syncTimer=setTimeout(saveNow,120)}
+function bindSessionPerson(){
+  let u=db.users.find(x=>x.mainAdmin)||db.users.find(x=>x.status==='tenant');
+  if(!u){u={id:Date.now(),name:'Benjamin Böttcher',status:'tenant',active:true,mainAdmin:true,fixedHunter:true,isHunter:true,isDistributor:true,isAdmin:true,groups:[]};db.users.unshift(u)}
+  db.session=u.id;
+}
 const A=document.querySelector('#app');
 function confirmSaved(msg='Gespeichert'){alert('✓ '+msg);}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function shell(x){A.innerHTML=`<div class='wrap'>${x}</div>`} function user(){return db.users.find(x=>x.id===db.session)} function hunters(){return db.users.filter(x=>x.active)} function fixedHunters(){return db.users.filter(x=>x.active&&(x.status==='fixed'||x.status==='tenant'||x.fixedHunter))} function canDistribute(){let u=user();return !!(u&&(u.isDistributor||u.isAdmin))} function isAdmin(){return !!user()?.isAdmin}
-function login(){shell(`<div class='brand'><div class='mark'>🦌</div><h1>Wildverteilung</h1><div class='small'>Jagdgemeinschaft</div></div><div class='card'><label>Benutzername</label><input id='l' autocomplete='username'><label>PIN</label><input id='p' type='password' inputmode='numeric'><button class='btn' id='go'>Anmelden</button><div class='small' style='margin-top:12px'>Nur Pächter haben Zugang zur App. Zugangsdaten werden ausschließlich in der Pächterverwaltung vergeben.</div></div><p class='small' style='text-align:center'>Erstzugang Benjamin: benjamin / 1234<br><b>Version ${APP_VERSION}</b> · Stand ${APP_DATE}</p>`);go.onclick=()=>{let u=db.users.find(x=>x.active&&x.status==='tenant'&&(x.login||'').toLowerCase()===l.value.trim().toLowerCase()&&x.pin===p.value);if(!u)return alert('Benutzername oder PIN nicht korrekt.');db.session=u.id;save();home()}} 
-function head(title){return `<div class='top'><button onclick='home()'>‹</button><h2>${title}</h2><button onclick='logout()'>⎋</button></div>`} window.logout=()=>{db.session=null;save();login()};
+function login(){shell(`<div class='brand'><div class='mark'>🦌</div><h1>Wildverteilung</h1><div class='small'>Jagdgemeinschaft</div></div><div class='card'><label>E-Mail</label><input id='l' type='email' autocomplete='username' placeholder='E-Mail des Pächter-Zugangs'><label>Passwort</label><input id='p' type='password' autocomplete='current-password'><button class='btn' id='go'>Anmelden</button><div class='small' style='margin-top:12px'>Nur Pächter haben Zugang. Anmeldung läuft zentral über Supabase Auth.</div></div><p class='small' style='text-align:center'><b>Version ${APP_VERSION}</b> · Stand ${APP_DATE}</p>`);go.onclick=async()=>{go.disabled=true;go.textContent='Anmeldung …';const {data,error}=await sb.auth.signInWithPassword({email:l.value.trim(),password:p.value});if(error){go.disabled=false;go.textContent='Anmelden';return alert('Anmeldung fehlgeschlagen: '+error.message)}authUser=data.user;try{await loadCloudState();bindSessionPerson();home()}catch(e){await sb.auth.signOut();authUser=null;alert('Datenbank konnte nicht geladen werden. Bitte zuerst die SQL-Datei V0.14 ausführen.\n\n'+e.message);login()}}}
+function head(title){return `<div class='top'><button onclick='home()'>‹</button><h2>${title}</h2><button onclick='logout()'>⎋</button></div>`}
+window.logout=async()=>{await saveNow();await sb.auth.signOut();authUser=null;db=structuredClone(seed);login()};
 function home(){let u=user();if(!u)return login();let manage=canDistribute();shell(`<div class='top'><div><div class='small'>Angemeldet als</div><h2 style='margin:2px 0'>${esc(u.name)}</h2><div class='small'>${u.mainAdmin?'Hauptadministrator · Pächter':'Pächter · Verwaltung'}</div></div><button onclick='logout()'>⎋</button></div><div class='grid'><button class='tile' onclick='myShares()'><span>🥩</span>Meine Zuteilungen</button>${manage?`<button class='tile secondary' onclick='newKill()'><span>🦌</span>Schalenwild</button><button class='tile secondary' onclick='drive()'><span>🌿</span>Treibjagd</button><button class='tile' onclick='distribute()'><span>⚖️</span>Offene Verteilung</button><button class='tile secondary' onclick='historyView()'><span>📜</span>Historie</button>`:(u.isHunter?`<button class='tile secondary' onclick='myDrive()'><span>🌿</span>Treibjagd</button>`:'')}${u.isAdmin?`<button class='tile' onclick='hunterAdmin()'><span>👥</span>Personen</button>`:''}</div><div class='small' style='text-align:center;margin-top:20px'>Wildverteilung · <b>Version ${APP_VERSION}</b> · Stand ${APP_DATE}</div>`)} window.home=home;
 window.newKill=()=>{shell(`${head('Schalenwild eintragen')}<div class='card'><label>Datum</label><input id='date' type='date' value='${new Date().toISOString().slice(0,10)}'><label>Wildart</label><select id='species'><option>Damwild</option><option>Schwarzwild</option></select><label>Schütze</label><select id='shooter'>${hunters().map(x=>`<option value='${x.id}'>${esc(x.name)}</option>`)}</select><label>Verwertbare Teile</label><div id='checks'>${['Keule links','Keule rechts','Rücken','Vorderviertel links','Vorderviertel rechts'].map((x,i)=>`<label class='item'><input type='checkbox' class='part' value='${x}' ${i<5?'checked':''}> ${x}</label>`).join('')}</div><label>Bemerkung</label><input id='note'><button class='btn' id='savekill'>Stück speichern</button></div>`);savekill.onclick=()=>{let ps=[...document.querySelectorAll('.part:checked')].map((e,i)=>({id:i,name:e.value,recipient:null,source:'open'}));if(!ps.length)return alert('Mindestens einen verwertbaren Teil auswählen.');db.kills.push({id:Date.now(),date:date.value,species:species.value,shooter:+shooter.value,parts:ps,note:note.value,createdBy:user().id});save();confirmSaved('Stück wurde angelegt. Weiter zur Verteilung.');distribute()}}
 window.hunterAdmin=()=>{if(!isAdmin())return home();let gf=window._groupFilter||'all';let active=db.users.filter(u=>u.active&&(gf==='all'||(u.groups||[]).includes(+gf)));let sections=[['tenant','Pächter'],['fixed','Feste Jäger'],['guest','Nicht feste Jäger']];shell(`${head('Personen')}<div class='card personhero'><div><h3 style='margin:0'>Personenverwaltung</h3><div class='small'>${db.users.filter(u=>u.active).length} aktive Personen · ${db.groups.length} Gruppen</div></div><button class='btn compact' onclick='personTypeChooser()'>＋ Person</button></div>${db.groups.length?`<div class='card'><label>Gruppe anzeigen</label><select onchange='setGroupFilter(this.value)'><option value='all'>Alle Gruppen</option>${db.groups.map(g=>`<option value='${g.id}' ${String(gf)===String(g.id)?'selected':''}>${esc(g.name)}</option>`).join('')}</select></div>`:''}<div class='personsections'>${sections.map(([st,title])=>{let people=active.filter(u=>u.status===st);return `<section class='personsection'><div class='personsectionhead'><h3>${title}</h3><span>${people.length}</span></div><div class='personlist'>${people.map(u=>personCard(u)).join('')||`<div class='emptygroup'>Keine Personen</div>`}</div></section>`}).join('')}</div><div class='card'><button class='btn secondary' onclick='groupAdmin()'>👥 Gruppen verwalten</button><button class='btn secondary' onclick='showInactive()'>Deaktivierte Personen (${db.users.filter(u=>!u.active).length})</button></div>`) };
@@ -77,4 +107,5 @@ window.myShares=()=>{let u=user(),rows=[];db.kills.forEach(k=>k.parts.filter(p=>
 window.acceptDrive=(hid,idx)=>{let h=db.hunts.find(x=>x.id===hid),a=h?.allocations?.[idx];if(!a||a.recipient!==user().id)return;a.accepted=true;a.source=(a.source||'Zuteilung')+' · angenommen';save();myShares()};
 window.rejectDrive=(hid,idx)=>{let h=db.hunts.find(x=>x.id===hid),a=h?.allocations?.[idx];if(!a||a.recipient!==user().id)return;a.rejectedBy=a.rejectedBy||[];if(!a.rejectedBy.includes(user().id))a.rejectedBy.push(user().id);let candidates=h.participants.map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&u.active&&!a.rejectedBy.includes(u.id)).sort((x,y)=>driveCount(x.id,a.species)-driveCount(y.id,a.species));a.recipient=candidates[0]?.id||null;a.accepted=false;a.source=a.recipient?'nach Ablehnung neu vorgeschlagen':'von allen abgelehnt';save();myShares()};
 window.historyView=()=>{if(!canDistribute())return home();shell(`${head('Historie')}<div class='card'><h3>Schalenwild</h3>${db.kills.slice().reverse().map(k=>`<div class='item'><b>${k.date} · ${k.species}</b><div class='small'>${k.parts.map(p=>`${esc(p.name)}: ${p.recipient?esc(db.users.find(u=>u.id===p.recipient)?.name):'offen'}${p.source?' ('+p.source+')':''}`).join(' · ')}</div></div>`).join('')||'Noch keine Einträge.'}</div><div class='card'><h3>Treibjagden</h3>${db.hunts.slice().reverse().map(h=>`<div class='item'><b>${h.date} · ${esc(h.name)}</b><div class='small'>${(h.allocations||[]).map(a=>`${a.species}: ${esc(db.users.find(u=>u.id===a.recipient)?.name)}`).join(' · ')}</div></div>`).join('')||'Noch keine Einträge.'}</div>`)};
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{}); db.session?home():login();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=0140').catch(()=>{});
+(async()=>{const {data}=await sb.auth.getSession();if(!data.session)return login();authUser=data.session.user;try{await loadCloudState();bindSessionPerson();home()}catch(e){console.error(e);login();alert('Zentrale Datenbank noch nicht bereit: '+e.message)}})();
