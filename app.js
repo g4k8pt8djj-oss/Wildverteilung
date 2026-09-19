@@ -1,8 +1,15 @@
-const APP_VERSION='0.11.0'; const APP_DATE='19.09.2026';
+const APP_VERSION='0.11.1'; const APP_DATE='19.09.2026';
 const KEY='wildverteilung_v4';
 const old=JSON.parse(localStorage.getItem('wildverteilung_v1')||'null');
 const seed={users:[{id:1,name:'Benjamin Böttcher',login:'benjamin',pin:'1234',status:'tenant',fixedHunter:true,isHunter:true,isDistributor:true,isAdmin:true,mainAdmin:true,phone:'',active:true},{id:2,name:'Uwe',login:'',pin:'',status:'fixed',fixedHunter:true,isHunter:true,isDistributor:false,isAdmin:false,phone:'',active:true},{id:3,name:'Jürgen',login:'',pin:'',status:'fixed',fixedHunter:true,isHunter:true,isDistributor:false,isAdmin:false,phone:'',active:true}],kills:[],hunts:[],session:null};
-let db=JSON.parse(localStorage.getItem(KEY)||'null')||JSON.parse(localStorage.getItem('wildverteilung_v3')||'null')||JSON.parse(localStorage.getItem('wildverteilung_v2')||'null')||old||seed; db.hunts=db.hunts||[]; db.users.forEach(u=>{u.active=u.active!==false; if(u.fixedHunter===undefined)u.fixedHunter=!!u.isHunter; if(!u.status)u.status=u.fixedHunter?'fixed':'guest'; if((u.name||'').toLowerCase()==='benjamin böttcher'){u.mainAdmin=true;u.status='tenant'} u.isHunter=true; u.fixedHunter=u.status==='fixed'||u.status==='tenant'; u.isDistributor=u.status==='tenant'; u.isAdmin=u.status==='tenant'; if(u.status!=='tenant'){u.login='';u.pin=''} }); db.kills.forEach(k=>k.parts.forEach(p=>{p.rejectedBy=p.rejectedBy||[]})); db.hunts.forEach(h=>(h.allocations||[]).forEach(a=>{a.rejectedBy=a.rejectedBy||[]}));
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||JSON.parse(localStorage.getItem('wildverteilung_v3')||'null')||JSON.parse(localStorage.getItem('wildverteilung_v2')||'null')||old||seed; db.hunts=db.hunts||[];
+// V0.11.1: Hauptadministrator-Zugang selbstheilend sicherstellen, ohne Jagd-/Verteilungsdaten zu löschen.
+let mainAdmin=db.users.find(u=>(u.name||'').trim().toLowerCase()==='benjamin böttcher') || db.users.find(u=>u.mainAdmin);
+if(!mainAdmin){mainAdmin={id:Date.now(),name:'Benjamin Böttcher',phone:'',active:true};db.users.unshift(mainAdmin)}
+mainAdmin.name='Benjamin Böttcher'; mainAdmin.active=true; mainAdmin.status='tenant'; mainAdmin.fixedHunter=true; mainAdmin.isHunter=true; mainAdmin.isDistributor=true; mainAdmin.isAdmin=true; mainAdmin.mainAdmin=true;
+// Reparaturzugang für diese Version. Nach Anmeldung kann Benjamin die PIN in der Personenverwaltung ändern.
+mainAdmin.login='benjamin'; mainAdmin.pin='1234';
+db.users.forEach(u=>{u.active=u.active!==false; if(u.fixedHunter===undefined)u.fixedHunter=!!u.isHunter; if(!u.status)u.status=u.fixedHunter?'fixed':'guest'; if((u.name||'').toLowerCase()==='benjamin böttcher'){u.mainAdmin=true;u.status='tenant'} u.isHunter=true; u.fixedHunter=u.status==='fixed'||u.status==='tenant'; u.isDistributor=u.status==='tenant'; u.isAdmin=u.status==='tenant'; if(u.status!=='tenant'){u.login='';u.pin=''} }); db.kills.forEach(k=>k.parts.forEach(p=>{p.rejectedBy=p.rejectedBy||[]})); db.hunts.forEach(h=>(h.allocations||[]).forEach(a=>{a.rejectedBy=a.rejectedBy||[]})); save();
 const save=()=>{localStorage.setItem(KEY,JSON.stringify(db));}, A=document.querySelector('#app');
 function confirmSaved(msg='Gespeichert'){alert('✓ '+msg);}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
