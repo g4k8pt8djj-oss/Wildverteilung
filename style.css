@@ -2,3 +2,27 @@
 .step{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-bottom:8px}.choice{display:flex;gap:8px;flex-wrap:wrap}.choice button{flex:1;min-width:120px}.personrow{display:flex;align-items:center;justify-content:space-between;gap:12px}.personmeta{flex:1}.status{font-weight:700}.success{padding:12px;border-radius:12px;background:#eaf5ed;margin:10px 0}.bigplus{font-size:20px}.countrow{display:grid;grid-template-columns:1fr 48px 64px 48px;align-items:center;gap:8px;margin:10px 0}.countrow button{height:44px}.countrow input{text-align:center;margin:0}.danger{color:#a32626}.sectiontitle{margin:18px 0 8px}.stickybar{position:sticky;bottom:0;background:white;padding:10px 0}.printonly{display:none}@media print{.noprint,.top,button{display:none!important}.printonly{display:block}.wrap{max-width:none}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}}
 .personhero{display:flex;align-items:center;justify-content:space-between;gap:14px}.compact{width:auto;margin:0;padding:11px 15px}.filterbar{display:flex;gap:8px;overflow:auto;padding-bottom:2px}.chip{white-space:nowrap;border:1px solid #cbd5cc;background:#f7faf7;color:var(--g);border-radius:999px;padding:9px 13px;font-weight:700}.chip.active{background:var(--g);color:#fff}.personlist{display:grid;gap:10px}.personcard{margin:0}.personcardtop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.personcard h3{margin:0 0 8px;font-size:22px}.editbtn{border:0;background:#eef3ee;color:var(--g);border-radius:10px;padding:9px 11px;font-weight:700}.rolebadge{display:inline-block;font-size:11px;font-weight:850;letter-spacing:.04em;padding:5px 8px;border-radius:999px;margin:0 5px 5px 0}.rolebadge.tenant{background:#dcebdc;color:#24422d}.rolebadge.fixed{background:#e3edf5;color:#284e68}.rolebadge.guest{background:#efefec;color:#5d625d}.rolebadge.admin{background:#f3ead1;color:#705515}.facts{display:flex;gap:8px 14px;flex-wrap:wrap;margin-top:13px;color:#5f685f;font-size:13px}.grouptags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.grouptags span{background:#f1eee5;border-radius:999px;padding:5px 8px;font-size:12px}.typechoice{width:100%;text-align:left;border:1px solid #d8ded8;background:#fff;border-radius:14px;padding:16px;margin:8px 0;color:#172019}.typechoice b{display:block;font-size:18px;color:var(--g)}.typechoice span{display:block;color:var(--muted);font-size:13px;margin-top:4px}.rolepreview{display:inline-block;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:850;margin-bottom:8px}.rolepreview.tenant{background:#dcebdc}.rolepreview.fixed{background:#e3edf5}.rolepreview.guest{background:#efefec}.groupchecks{display:grid;grid-template-columns:1fr 1fr;gap:8px}.groupchecks label{margin:0;padding:11px;border:1px solid #e0e4df;border-radius:11px;font-weight:600}.groupchecks input,.attendanceperson input{width:auto}.groupadminrow{display:flex;justify-content:space-between;align-items:center}.attendanceperson{display:flex;align-items:center;gap:12px}.attendanceperson span{flex:1}@media(max-width:480px){.personcardtop{align-items:center}.personcard h3{font-size:20px}.facts{display:grid;gap:4px}.groupchecks{grid-template-columns:1fr}.personhero{align-items:flex-start}}
 .personsections{display:grid;gap:18px;margin:14px 0}.personsection{display:grid;gap:9px}.personsectionhead{display:flex;align-items:center;justify-content:space-between;padding:0 4px}.personsectionhead h3{margin:0;font-size:17px;letter-spacing:.035em;text-transform:uppercase;color:var(--g)}.personsectionhead span{min-width:28px;text-align:center;background:#e8eee8;color:var(--g);border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800}.emptygroup{border:1px dashed #d7ddd7;border-radius:13px;padding:14px;color:var(--muted);background:#fafbfa;font-size:13px}
+
+/* Treibjagd test2: kompakte, mobile Schützen-/Mitnahmerechte */
+.driveSummary{position:sticky;top:0;z-index:5;padding:12px 14px}
+.driveSummaryGrid{display:flex;gap:7px;overflow-x:auto;margin-top:9px;padding-bottom:2px}
+.driveSummaryPill{min-width:118px;border:1px solid #dce3dc;border-radius:11px;padding:7px 9px;background:#f8faf8}
+.driveSummaryPill b{display:block;font-size:13px;color:var(--g)}
+.driveSummaryPill span{display:block;font-size:12px;white-space:nowrap;margin-top:2px}
+.drivePersonCard{padding:13px 14px}
+.drivePersonCard h3{margin:0 0 8px;font-size:18px}
+.driveSpeciesRow{display:grid;grid-template-columns:minmax(68px,.8fr) 1.6fr 1.6fr;gap:8px;align-items:end;padding:8px 0;border-top:1px solid #eceeea}
+.driveSpecies{align-self:center;font-size:14px}
+.driveMini{display:grid;grid-template-columns:34px 48px 34px;gap:4px;align-items:center;justify-content:end}
+.driveMini span{grid-column:1/-1;text-align:center;font-size:10px;color:var(--muted);font-weight:700}
+.driveMini button{height:36px;border:1px solid #d6ddd6;background:#f4f7f4;border-radius:9px;font-size:19px;font-weight:800;color:var(--g)}
+.driveMini input{height:36px;padding:4px;text-align:center;border-radius:9px;font-size:18px;font-weight:850;color:#172019}
+.driveQuick{display:flex;gap:7px;margin-top:8px}
+.driveQuick button{flex:1;border:1px solid #d7ded7;background:#f5f8f5;color:var(--g);border-radius:9px;padding:8px 6px;font-size:12px;font-weight:750}
+@media(max-width:520px){
+ .driveSpeciesRow{grid-template-columns:62px 1fr 1fr;gap:5px}
+ .driveMini{grid-template-columns:30px 42px 30px;gap:3px}
+ .driveMini button{height:34px;padding:0}
+ .driveMini input{height:34px;font-size:17px}
+ .drivePersonCard{padding:11px 10px}
+}
